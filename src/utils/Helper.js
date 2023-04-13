@@ -236,6 +236,19 @@ export function shuffle( o ) {
 	return o;
 };
 
+export function generatePlayers(number) {
+	let players = [];
+	for(let i=0; i < number; i++){
+		players=[...players, {
+			id: i+1, 
+			index:1, 
+			name: 'Player' + 1, 
+			perfect_throws: 'calculating...',
+			tile: 90
+		}]
+	}
+	return players;	
+}
 
 export function generateLadders( difficulty ) {
 	// 1: easy, 2: medium, 3: difficult, 4: hell mode
@@ -341,9 +354,9 @@ export function getPlayerPositionCSSStyles( data ) {
 	top = top - ( gameboard.top + window.scrollY );
 	left = left - gameboard.left;
 
-	let padding_left = config.player.width * data.array_index;
+	let padding_left = config.player.width * 0;
 	padding_left = padding_left + 8;
-	left = left + padding_left + ( data.array_index * 2 );
+	left = left + padding_left + (0 * 2 );
 
 
 	let padding_top = ( config.tile.width - config.player.width ) / 2;
@@ -537,3 +550,4 @@ export function generateSnakeStyle( data ) {
 	return tile_css_styles;
 
 }
+
