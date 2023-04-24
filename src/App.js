@@ -23,15 +23,22 @@ function App() {
     dice: null
   });
 
-
+  useEffect(() => {
+    ipcRenderer.on('toReact', (event, data) => {
+      setState(previous => {
+        return ({...previous, dice: +data.move});
+      });
+    });
+  
+  }, []);
  
-
+ 
   const gameRollDice = () => {
     setState(previous => ({...previous, dice: Math.floor((Math.random() * 6) + 1)}));
   }
 
   const movePlayer =() => {
-    
+    debugger;
     let data = {
 			id: state.players[0].id,
 			moves: state.dice,
@@ -47,6 +54,7 @@ function App() {
 
 
 async function playerUpdatePosition( data ) {
+  debugger;
 	const updated_data = Helper.calculatePlayerNewPosition( data );
 	let previous_player_data = Helper.getLastCalculatedPlayerPosition();
   let perfect_throws = Helper.calculatePerfectThrowsFromPosition( previous_player_data.index );

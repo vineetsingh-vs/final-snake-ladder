@@ -308,6 +308,7 @@ export function generateSnakes( difficulty ) {
 
 
 export function calculatePlayerNewPosition( data ) {
+	debugger;
 	let pos = data.index + data.moves;
 	if( pos > 100 ) { pos = 100; }
 

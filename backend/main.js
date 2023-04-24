@@ -6,13 +6,26 @@ const path = require('path');
 
 const mongoose = require('mongoose');
 
+const bleno = require('@abandonware/bleno');
+
+const desiredDeviceName = 'ENEB453';
+
+// // UUIDs of the service and characteristic you want to send/receive data to/from
+// const serviceUuid = '181C'; // Replace with the UUID of your target service
+// const characteristicUuid = '2A3D'; // Replace with the UUID of your target characteristic
+
+// Create a new BLE service
+const serviceUuid = '12345678901234567890123456789012'; // Replace with your desired service UUID
+const characteristicUuid = '12345678901234567890123456789013'; // Replace with your desired characteristic UUID
+
+
 // Define a generic Mongoose schema with a field of type Mixed
 const genericSchema = new mongoose.Schema({}, { strict: false });
 
 // Define a Mongoose model based on the schema
 const GenericModel = mongoose.model('GenericModel', genericSchema);
 
-const createWindow = () => {
+const createWindow = () => { 
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 1200,
@@ -32,6 +45,10 @@ const createWindow = () => {
   mainWindow.loadURL('http://localhost:3000')
   mainWindow.webContents.openDevTools();
 
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.executeJavaScript('window.nodeIntegration = true;');
+  });
+
   // Open the DevTools.
   // mainWindow.webContents.openDevTools()
 }
@@ -43,7 +60,7 @@ app.whenReady().then(() => {
   createWindow();
   mongoose.connect('mongodb://admin:password@localhost', { useNewUrlParser: true })
   .then(() => {
-    console.log('MongoDB connected successfully');
+    console.log('MongoDBconnected successfully');
     // Call a function to handle the event and store data
 
   })
@@ -79,4 +96,55 @@ ipcMain.on('fromReact', (event, messageData) => {
      console.error('Failed to save data:', error);
    });
   dialog.showErrorBox('ENEB453', messageData.message);
+});
+
+
+// Define a service with a characteristic
+const myCharacteristic = new bleno.Characteristic({
+  uuid: characteristicUuid, // Set a unique UUID for your characteristic
+  properties: ['read', 'write'], // Set the properties of the characteristic (e.g., 'read', 'write', 'notify', etc.)
+  onReadRequest: (offset, callback) => {
+    // Handle read requests for the characteristic
+    callback(bleno.Characteristic.RESULT_SUCCESS, Buffer.from('Hello, World!'));
+  },
+  onWriteRequest: (data, offset, withoutResponse, callback) => {
+    // Handle write requests for the characteristic
+    console.log(`Received data: ${data.toString()}`);
+    ipcMain.emit('fromBle', {move: data.toString()});
+    callback(bleno.Characteristic.RESULT_SUCCESS);
+  }
+});
+
+// Set the services for the peripheral
+const myServices = new bleno.PrimaryService({
+  uuid: serviceUuid, // Set a unique UUID for your service
+  characteristics: [myCharacteristic]
+});
+
+// Start advertising the peripheral
+bleno.on('stateChange', (state) => {
+  if (state === 'poweredOn') {
+    bleno.startAdvertising(desiredDeviceName, [myServices.uuid]); // Set the name of your peripheral and the UUID of the service you defined
+  } else {
+    bleno.stopAdvertising();
+  }
+});
+
+bleno.on('advertisingStart', (error) => {
+  if (!error) {
+    bleno.setServices([myServices]);
+  }
+});
+
+
+// Listen for an event in the main process
+ipcMain.on('fromBle', (data, event) => {
+  // Get references to all open renderer windows
+  const rendererWindows = BrowserWindow.getAllWindows();
+  console.log(data);
+
+  // Send data to all renderer processes
+  for (const window of rendererWindows) {
+    window.webContents.send('toReact', data);
+  }
 });
