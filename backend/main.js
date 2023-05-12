@@ -8,15 +8,19 @@ const mongoose = require('mongoose');
 
 const bleno = require('@abandonware/bleno');
 
+const noble = require('@abandonware/noble');
+
 const desiredDeviceName = 'ENEB453';
+const serviceUUID = '1111'; // Replace with the UUID of the service you want to use
+const characteristicUuid = '2222'; // Replace with the UUID of the characteristic you want to use
 
 // // UUIDs of the service and characteristic you want to send/receive data to/from
 // const serviceUuid = '181C'; // Replace with the UUID of your target service
 // const characteristicUuid = '2A3D'; // Replace with the UUID of your target characteristic
 
-// Create a new BLE service
-const serviceUuid = '12345678901234567890123456789012'; // Replace with your desired service UUID
-const characteristicUuid = '12345678901234567890123456789013'; // Replace with your desired characteristic UUID
+// // Create a new BLE service
+// const serviceUuid = '12345678901234567890123456789012'; // Replace with your desired service UUID
+// const characteristicUuid = '12345678901234567890123456789013'; // Replace with your desired characteristic UUID
 
 
 // Define a generic Mongoose schema with a field of type Mixed
@@ -117,7 +121,7 @@ const myCharacteristic = new bleno.Characteristic({
 
 // Set the services for the peripheral
 const myServices = new bleno.PrimaryService({
-  uuid: serviceUuid, // Set a unique UUID for your service
+  uuid: serviceUUID, // Set a unique UUID for your service
   characteristics: [myCharacteristic]
 });
 
@@ -137,14 +141,55 @@ bleno.on('advertisingStart', (error) => {
 });
 
 
-// Listen for an event in the main process
-ipcMain.on('fromBle', (data, event) => {
-  // Get references to all open renderer windows
-  const rendererWindows = BrowserWindow.getAllWindows();
-  console.log(data);
 
-  // Send data to all renderer processes
-  for (const window of rendererWindows) {
-    window.webContents.send('toReact', data);
+// Scan for BLE devices
+noble.startScanning();
+
+// Handle discovered devices
+noble.on('discover', (peripheral) => {
+  console.log(peripheral.advertisement.localName);
+  if (peripheral.advertisement.localName === desiredDeviceName) {
+    // Stop scanning for devices
+    noble.stopScanning();
+
+    // Connect to desired peripheral device
+    peripheral.connect((error) => {
+      if (error) {
+        console.error('Failed to connect:', error);
+        return;
+      }
+
+      // Discover services and characteristics
+      peripheral.discoverAllServicesAndCharacteristics((error, services, characteristics) => {
+        console.log(characteristics);
+        if (error) {
+          console.error('Failed to discover services and characteristics:', error);
+          peripheral.disconnect();
+          return;
+        }
+
+        // Find desired characteristic
+        const characteristic = characteristics.find(c => c.uuid === characteristicUuid);
+        console.log(characteristic);
+        if (!characteristic) {
+          console.error('Characteristic not found');
+          peripheral.disconnect();
+          return;
+        }
+
+        // Read data from characteristic
+        characteristic.read((error, data) => {
+          if (error) {
+            console.error('Failed to read data:', error);
+            peripheral.disconnect();
+            return;
+          }
+          ipcMain.emit('fromBle', {move: data.toString()});
+          console.log('Data:', data.toString());
+          peripheral.disconnect();
+        });
+      });
+    });
   }
 });
+
