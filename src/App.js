@@ -29,6 +29,7 @@ function App() {
     audiodice.play();
   }
   const stateRef = useRef();
+  const moverRef = useRef();
   const options = [
     '2', '3', '4'
   ];
@@ -55,12 +56,14 @@ function App() {
   }, [state.playerCounter]);
 
   ipcRenderer.on('toReact', (event, data) => {
-    if(stateRef.current === 2 && !state.dice){
+    if(stateRef.current === 2 && !moverRef.current){
+      moverRef.current = true;
       startmusicdice();
       setState(previous => {
         return ({...previous, dice: +data.move.replace(/["']/g, ""), playerMoved: true});
       });
       setTimeout(() => {
+        moverRef.current = false;
         setState(previous => ({...previous, movePlayer: 1}));
       }, 2000);
     }
@@ -75,16 +78,17 @@ function App() {
  
  
   const gameRollDice = () => {
+    moverRef.current = true;
     startmusicdice();
     setState(previous => ({...previous, dice: Math.floor((Math.random() * 6) + 1), playerMoved: true}));
     setTimeout(() => {
+      moverRef.current = false;
       setState(previous => ({...previous, movePlayer: 0}));
     }, 2000);
   
   }
 
   const movePlayer =(index) => {
-    debugger;
     const player = index;
     setState(previous => ({...previous, playerCounter: (state.playerCounter +1)%state.players.length, playerMoved: false}));
     let data = {
@@ -117,7 +121,8 @@ async function playerUpdatePosition( data ) {
   let perfect_throws = Helper.calculatePerfectThrowsFromPosition( previous_player_data.index );
   if( previous_player_data.index === 100 ) {
   
-    ipcRenderer.send('fromReact', {message: 'hello Player 1 win'});
+    ipcRenderer.send('fromReact', {message: 'hello Player '+ stateRef.current +' win'});
+    startmusicwin();
     setTimeout(function() {
       playerUpdatePosition({ id: data.id, index: 100, moves: 1-100 });
     }, 400);
@@ -182,8 +187,8 @@ async function playerUpdatePosition( data ) {
           className="full blue" onClick={ gameRollDice }>Roll</button>
         } */}
          <button 
-          style={{ opacity: !!state.playerMoved || state.playerCounter + 1 === 2 ? 0.5 : 1, cursor: !!state.playerMoved || state.playerCounter + 1 === 2 ? 'not-allowed' : 'pointer' }}
-          disabled={state.playerCounter + 1 === 2 || !!state.playerMoved} 
+          style={{ opacity: state.playerCounter + 1 === 2 || moverRef.current ? 0.5 : 1, cursor:  state.playerCounter + 1 === 2 || moverRef.current ? 'default' : 'pointer' }}
+          disabled={state.playerCounter + 1 === 2 || moverRef.current } 
           className="full blue" onClick={ gameRollDice }>Roll</button>
         <br></br>
         <button className="full grey" onClick={ () => { window.location.reload();} }>Reset</button>
