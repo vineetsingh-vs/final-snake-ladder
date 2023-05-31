@@ -10,7 +10,7 @@ const bleno = require('@abandonware/bleno');
 
 const noble = require('@abandonware/noble');
 
-const desiredDeviceName = 'ENEB453';
+const desiredDeviceName = 'Smart Dice';
 const serviceUUID = '1111'; // Replace with the UUID of the service you want to use
 const characteristicUuid = '2222'; // Replace with the UUID of the characteristic you want to use
 
@@ -47,14 +47,14 @@ const createWindow = () => {
 
   // and load the index.html of the app.
   mainWindow.loadURL('http://localhost:3000')
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
 
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow.webContents.executeJavaScript('window.nodeIntegration = true;');
   });
 
   // Open the DevTools.
-  // mainWindow.webContents.openDevTools()
+   mainWindow.webContents.openDevTools()
 }
 
 // This method will be called when Electron has finished
@@ -62,6 +62,7 @@ const createWindow = () => {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   createWindow();
+  /*
   mongoose.connect('mongodb://admin:password@localhost', { useNewUrlParser: true })
   .then(() => {
     console.log('MongoDBconnected successfully');
@@ -71,6 +72,7 @@ app.whenReady().then(() => {
   .catch((error) => {
     console.error('Failed to connect to MongoDB:', error);
   });
+  */
   app.on('activate', () => {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
@@ -109,7 +111,7 @@ const myCharacteristic = new bleno.Characteristic({
   properties: ['read', 'write'], // Set the properties of the characteristic (e.g., 'read', 'write', 'notify', etc.)
   onReadRequest: (offset, callback) => {
     // Handle read requests for the characteristic
-    callback(bleno.Characteristic.RESULT_SUCCESS, Buffer.from('Hello, World!'));
+    //callback(bleno.Characteristic.RESULT_SUCCESS, Buffer.from('Hello, World!'));
   },
   onWriteRequest: (data, offset, withoutResponse, callback) => {
     // Handle write requests for the characteristic
@@ -185,11 +187,43 @@ noble.on('discover', (peripheral) => {
             return;
           }
           ipcMain.emit('fromBle', {move: data.toString()});
+          const buff = Buffer.from(data, 'utf8');
           console.log('Data:', data.toString());
-          peripheral.disconnect();
+          //peripheral.disconnect();
         });
+
+        // Subscribe to characteristic for notifications
+characteristic.subscribe((error) => {
+  if (error) {
+    console.error('Failed to subscribe to characteristic:', error);
+    peripheral.disconnect();
+    return;
+  }
+
+  console.log('Subscribed to characteristic for notifications');
+
+  // Handle characteristic value changes
+  characteristic.on('data', (data, isNotification) => {
+    ipcMain.emit('fromBle', {move: data.toString()});
+    console.log('Received updated value:', data.toString());
+  });
+});
+
       });
     });
+  }
+});
+
+
+// Listen for an event in the main process
+ipcMain.on('fromBle', (data, event) => {
+  // Get references to all open renderer windows
+  const rendererWindows = BrowserWindow.getAllWindows();
+  console.log(data);
+
+  // Send data to all renderer processes
+  for (const window of rendererWindows) {
+    window.webContents.send('toReact', data);
   }
 });
 
