@@ -45,37 +45,53 @@ function App() {
     player: 0,
     gameStart: false,
     type: 'Computer',
-    playerCounter: 0
+    playerCounter: 0,
+    movePlayer: null,
+    playerMoved: false
   });
 
   useEffect(() => {
-    stateRef.current = state.playerCounter + 1;
-    ipcRenderer.on('toReact', (event, data) => {
-      if(stateRef.current === 2){
-        startmusicdice();
-        setState(previous => {
-          return ({...previous, dice: + data.move.replace(/["']/g, "")});
-        });
-      }
-    });
-
-    
+    stateRef.current = state.playerCounter + 1;    
   }, [state.playerCounter]);
+
+  ipcRenderer.on('toReact', (event, data) => {
+    if(stateRef.current === 2 && !state.dice){
+      startmusicdice();
+      setState(previous => {
+        return ({...previous, dice: +data.move.replace(/["']/g, ""), playerMoved: true});
+      });
+      setTimeout(() => {
+        setState(previous => ({...previous, movePlayer: 1}));
+      }, 2000);
+    }
+  });
+
+  useEffect(() => {
+    if(state.movePlayer !== null && state.movePlayer >=0) {
+      movePlayer(state.movePlayer);
+    }
+    
+  }, [state.movePlayer]);
  
  
   const gameRollDice = () => {
     startmusicdice();
-    setState(previous => ({...previous, dice: Math.floor((Math.random() * 6) + 1)}));
+    setState(previous => ({...previous, dice: Math.floor((Math.random() * 6) + 1), playerMoved: true}));
+    setTimeout(() => {
+      setState(previous => ({...previous, movePlayer: 0}));
+    }, 2000);
+  
   }
 
-  const movePlayer =() => {
-    const player = state.playerCounter;
-    setState(previous => ({...previous, playerCounter: (state.playerCounter +1)%state.players.length}));
+  const movePlayer =(index) => {
+    debugger;
+    const player = index;
+    setState(previous => ({...previous, playerCounter: (state.playerCounter +1)%state.players.length, playerMoved: false}));
     let data = {
-      id: state.players[player].id,
+      id: (state.players[player] || {}).id,
       moves: state.dice,
-      tile: state.players[player].tile,
-      index: state.players[player].index,
+      tile: (state.players[player] || {}).tile,
+      index: (state.players[player] || {}).index,
     };
     playerUpdatePosition(data);
     setTimeout((data) => {
@@ -157,14 +173,18 @@ async function playerUpdatePosition( data ) {
 
       <div className="m-t-20">
       {/* <button className="full green">Move</button> */}
-        { state.dice ?
+        {/* { state.dice ?
           <button  className="full green" onClick={ () => {movePlayer(state.player ===0 ? 1: 0)} }>Move</button>
           :
           <button 
           style={{ opacity: state.playerCounter + 1 === 2 ? 0.5 : 1, cursor: state.playerCounter + 1 === 2 ? 'not-allowed' : 'pointer' }}
           disabled={state.playerCounter + 1 === 2} 
           className="full blue" onClick={ gameRollDice }>Roll</button>
-        }
+        } */}
+         <button 
+          style={{ opacity: !!state.playerMoved || state.playerCounter + 1 === 2 ? 0.5 : 1, cursor: !!state.playerMoved || state.playerCounter + 1 === 2 ? 'not-allowed' : 'pointer' }}
+          disabled={state.playerCounter + 1 === 2 || !!state.playerMoved} 
+          className="full blue" onClick={ gameRollDice }>Roll</button>
         <br></br>
         <button className="full grey" onClick={ () => { window.location.reload();} }>Reset</button>
       </div>
