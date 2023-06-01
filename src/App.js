@@ -78,14 +78,16 @@ function App() {
  
  
   const gameRollDice = () => {
-    moverRef.current = true;
-    startmusicdice();
-    setState(previous => ({...previous, dice: Math.floor((Math.random() * 6) + 1), playerMoved: true}));
-    setTimeout(() => {
-      moverRef.current = false;
-      setState(previous => ({...previous, movePlayer: 0}));
-    }, 2000);
-  
+    if(stateRef.current === 1) {
+      moverRef.current = true;
+      startmusicdice();
+      setState(previous => ({...previous, dice: Math.floor((Math.random() * 6) + 1), playerMoved: true}));
+      setTimeout(() => {
+        moverRef.current = false;
+        setState(previous => ({...previous, movePlayer: 0}));
+      }, 2000);  
+    }
+   
   }
 
   const movePlayer =(index) => {
@@ -120,13 +122,15 @@ async function playerUpdatePosition( data ) {
   let previous_player_data = Helper.getLastCalculatedPlayerPosition();
   let perfect_throws = Helper.calculatePerfectThrowsFromPosition( previous_player_data.index );
   if( previous_player_data.index === 100 ) {
-  
-    ipcRenderer.send('fromReact', {message: 'Congratulations, Player '+ stateRef.current +' wins!'});
     startmusicwin();
+    ipcRenderer.send('fromReact', {message: 'Congratulations, Player '+ stateRef.current +' wins!'});
     setTimeout(function() {
       playerUpdatePosition({ id: data.id, index: 100, moves: 1-100 });
     }, 400);
-    window.location.reload();
+    setTimeout(() => {
+      window.location.reload();
+    },5000);
+    
   }
   const players = state.players.map((player) => {
     if(player.id === data.id) {
@@ -187,8 +191,8 @@ async function playerUpdatePosition( data ) {
           className="full blue" onClick={ gameRollDice }>Roll</button>
         } */}
          <button 
-          style={{ opacity: state.playerCounter + 1 === 2 || moverRef.current ? 0.5 : 1, cursor:  state.playerCounter + 1 === 2 || moverRef.current ? 'default' : 'pointer' }}
-          disabled={state.playerCounter + 1 === 2 || moverRef.current } 
+          style={{ opacity: moverRef.current ? 0.5 : 1, cursor: moverRef.current ? 'default' : 'pointer' }}
+          disabled={ moverRef.current } 
           className="full blue" onClick={ gameRollDice }>Roll</button>
         <br></br>
         <button className="full grey" onClick={ () => { window.location.reload();} }>Reset</button>
