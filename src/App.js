@@ -121,7 +121,7 @@ async function playerUpdatePosition( data ) {
   let perfect_throws = Helper.calculatePerfectThrowsFromPosition( previous_player_data.index );
   if( previous_player_data.index === 100 ) {
   
-    ipcRenderer.send('fromReact', {message: 'hello Player '+ stateRef.current +' win'});
+    ipcRenderer.send('fromReact', {message: 'Congratulations, Player '+ stateRef.current +' wins!'});
     startmusicwin();
     setTimeout(function() {
       playerUpdatePosition({ id: data.id, index: 100, moves: 1-100 });
@@ -161,7 +161,7 @@ async function playerUpdatePosition( data ) {
     <div>
       <div className="player-info">
         <p>Current Player</p>
-        <p className="name">Player{state.playerCounter + 1}</p>
+        <p className="name">Player {state.playerCounter + 1}</p>
         {/* <div className="moves-to-win">
           You are <strong>5</strong> moves away from a perfect win.
         </div> */}
